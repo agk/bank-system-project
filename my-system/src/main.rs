@@ -25,7 +25,7 @@ fn main() {
 
     // Предзаполняем пользователей для демонстрации
     for name in &["Alice", "Bob", "John", "Vasya"] {
-        storage.add_user(name.to_string());
+        storage.add_user(name.to_string(), bank_system::Currency::Rub);
     }
 
     match args[1].as_str() {
@@ -36,7 +36,7 @@ fn main() {
                 process::exit(1);
             }
             let name: Name = args[2].clone();
-            match storage.add_user(name.clone()) {
+            match storage.add_user(name.clone(), bank_system::Currency::Rub) {
                 Some(_) => println!("Пользователь '{}' добавлен", name),
                 None => println!("Пользователь '{}' уже существует", name),
             }

@@ -90,15 +90,15 @@ impl Storage {
         }
         match self.accounts.get_mut(name) {
             Some(acc) => {
-                if acc.balance < amount {
-                    Err(format!(
-                        "Недостаточно средств: баланс {}, запрошено {}",
-                        acc.balance, amount
-                    ))
-                } else {
-                    acc.balance -= amount;
-                    Ok(acc.balance)
-                }
+                // Проверка 2: кредитный лимит
+                // Проверяем ДО изменения баланса — золотое правило финансовой логики
+                if acc.balance - amount < -1000 {
+                    return Err("Превышен кредитный лимит".to_string())
+            
+                } 
+                acc.balance -= amount;
+                Ok(acc.balance)
+                
             }
             None => Err(format!("Пользователь '{}' не найден", name)),
         }
@@ -182,7 +182,7 @@ mod tests {
         storage.add_user("Frank".to_string(), Currency::Rub);
         storage.deposit(&"Frank".to_string(), 50).unwrap();
         // Пытаемся снять больше, чем есть
-        assert!(storage.withdraw(&"Frank".to_string(), 100).is_err());
+        assert!(storage.withdraw(&"Frank".to_string(), 1100).is_err());
         // Баланс не изменился
         assert_eq!(storage.get_balance(&"Frank".to_string()), Some(50));
     }
@@ -193,6 +193,26 @@ mod tests {
         storage.add_user("Grace".to_string(), Currency::Rub);
         assert!(storage.withdraw(&"Grace".to_string(), -10).is_err());
     }
+
+    #[test]
+    fn test_credit_limit_ok() {
+        let mut storage = Storage::new();
+        storage.add_user("Evaa".to_string(), Currency::Rub);
+        let result= storage.withdraw(&"Evaa".to_string(), 500);
+        assert_eq!(result, Ok(-500));
+        assert_eq!(storage.get_balance(&"Evaa".to_string()), Some(-500));
+    }
+
+    #[test]
+    fn test_credit_limit_fail () {
+        let mut storage = Storage::new();
+        storage.add_user("MarkT".to_string(), Currency::Rub);
+        // Пытаемся снять больше лимита 1000
+        assert!(storage.withdraw(&"MarkT".to_string(), 1500).is_err());
+        // Баланс не изменился
+        assert_eq!(storage.get_balance(&"MarkT".to_string()), Some(0));    
+    }
+
 
     #[test]
     fn test_get_balance_nonexistent() {
